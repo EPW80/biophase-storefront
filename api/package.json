@@ -1,0 +1,19 @@
+{
+  "name": "biophase-api",
+  "version": "1.0.0",
+  "description": "Express proxy server for Shopify Storefront API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "graphql-request": "^7.1.0",
+    "graphql": "^16.9.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  }
+}
