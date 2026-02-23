@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { client, gql } = require('../lib/shopifyClient');
+const { getClient, gql } = require('../lib/shopifyClient');
 
 /**
  * @swagger
@@ -50,23 +50,28 @@ const { client, gql } = require('../lib/shopifyClient');
  */
 
 /**
- * Transform raw Shopify product data into a clean API response
+ * Transform raw Shopify Admin API product data into a clean API response.
+ * Admin API uses priceRangeV2 and variant price is a flat string.
  */
 function transformProduct(node) {
+  const priceRange = node.priceRangeV2 || node.priceRange;
   return {
     id: node.id,
     title: node.title,
     handle: node.handle,
     description: node.description,
     descriptionHtml: node.descriptionHtml || null,
-    price: node.priceRange?.minVariantPrice || null,
+    price: priceRange?.minVariantPrice || null,
     image: node.images?.edges?.[0]?.node || null,
     images: node.images?.edges?.map((e) => e.node) || [],
     variants:
       node.variants?.edges?.map((e) => ({
         id: e.node.id,
         title: e.node.title,
-        price: e.node.priceV2,
+        price: {
+          amount: e.node.price,
+          currencyCode: priceRange?.minVariantPrice?.currencyCode || 'USD',
+        },
         availableForSale: e.node.availableForSale,
         selectedOptions: e.node.selectedOptions || [],
       })) || [],
@@ -119,7 +124,7 @@ router.get('/', async (req, res, next) => {
               title
               handle
               description
-              priceRange {
+              priceRangeV2 {
                 minVariantPrice {
                   amount
                   currencyCode
@@ -140,10 +145,7 @@ router.get('/', async (req, res, next) => {
                   node {
                     id
                     title
-                    priceV2 {
-                      amount
-                      currencyCode
-                    }
+                    price
                     availableForSale
                   }
                 }
@@ -154,6 +156,7 @@ router.get('/', async (req, res, next) => {
       }
     `;
 
+    const client = await getClient();
     const data = await client.request(query, { first: limit });
     const products = data.products.edges.map((edge) =>
       transformProduct(edge.node)
@@ -205,7 +208,7 @@ router.get('/:handle', async (req, res, next) => {
           handle
           description
           descriptionHtml
-          priceRange {
+          priceRangeV2 {
             minVariantPrice {
               amount
               currencyCode
@@ -230,10 +233,7 @@ router.get('/:handle', async (req, res, next) => {
               node {
                 id
                 title
-                priceV2 {
-                  amount
-                  currencyCode
-                }
+                price
                 availableForSale
                 selectedOptions {
                   name
@@ -251,6 +251,7 @@ router.get('/:handle', async (req, res, next) => {
       }
     `;
 
+    const client = await getClient();
     const data = await client.request(query, { handle });
 
     if (!data.productByHandle) {

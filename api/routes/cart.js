@@ -1,6 +1,37 @@
 const express = require('express');
 const router = express.Router();
-const { client, gql } = require('../lib/shopifyClient');
+
+/**
+ * In-memory cart store.
+ *
+ * Cart management is handled client-side in the React app (localStorage).
+ * These API endpoints provide a RESTful demonstration layer using an
+ * in-memory Map so the Express proxy still showcases CRUD operations,
+ * request validation, and Swagger-documented endpoints.
+ */
+const carts = new Map();
+
+let nextCartId = 1;
+let nextLineId = 1;
+
+function generateCartId() {
+  return `cart_${nextCartId++}`;
+}
+
+function generateLineId() {
+  return `line_${nextLineId++}`;
+}
+
+function computeTotals(lines) {
+  const sum = lines.reduce(
+    (acc, l) => acc + parseFloat(l.price) * l.quantity,
+    0
+  );
+  return {
+    subtotal: { amount: sum.toFixed(2), currencyCode: 'USD' },
+    total: { amount: sum.toFixed(2), currencyCode: 'USD' },
+  };
+}
 
 /**
  * @swagger
@@ -11,30 +42,16 @@ const { client, gql } = require('../lib/shopifyClient');
  *       properties:
  *         id:
  *           type: string
+ *         merchandiseId:
+ *           type: string
  *         quantity:
  *           type: integer
- *         variant:
- *           type: object
- *           properties:
- *             id:
- *               type: string
- *             title:
- *               type: string
- *             price:
- *               type: object
- *             productTitle:
- *               type: string
- *             productHandle:
- *               type: string
- *             image:
- *               type: object
- *               nullable: true
+ *         price:
+ *           type: string
  *     Cart:
  *       type: object
  *       properties:
  *         id:
- *           type: string
- *         checkoutUrl:
  *           type: string
  *         lines:
  *           type: array
@@ -46,86 +63,12 @@ const { client, gql } = require('../lib/shopifyClient');
  *           type: object
  */
 
-const CART_FRAGMENT = `
-  id
-  checkoutUrl
-  lines(first: 25) {
-    edges {
-      node {
-        id
-        quantity
-        merchandise {
-          ... on ProductVariant {
-            id
-            title
-            priceV2 {
-              amount
-              currencyCode
-            }
-            product {
-              title
-              handle
-              images(first: 1) {
-                edges {
-                  node {
-                    url
-                    altText
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  estimatedCost {
-    totalAmount {
-      amount
-      currencyCode
-    }
-    subtotalAmount {
-      amount
-      currencyCode
-    }
-  }
-`;
-
-/**
- * Transform raw Shopify cart data into a clean API response
- */
-function transformCart(cart) {
-  return {
-    id: cart.id,
-    checkoutUrl: cart.checkoutUrl,
-    lines:
-      cart.lines?.edges?.map((edge) => {
-        const node = edge.node;
-        const variant = node.merchandise;
-        return {
-          id: node.id,
-          quantity: node.quantity,
-          variant: {
-            id: variant.id,
-            title: variant.title,
-            price: variant.priceV2,
-            productTitle: variant.product?.title,
-            productHandle: variant.product?.handle,
-            image: variant.product?.images?.edges?.[0]?.node || null,
-          },
-        };
-      }) || [],
-    subtotal: cart.estimatedCost?.subtotalAmount || null,
-    total: cart.estimatedCost?.totalAmount || null,
-  };
-}
-
 /**
  * @swagger
  * /api/cart:
  *   post:
  *     summary: Create a new cart
- *     description: Creates an empty Shopify cart
+ *     description: Creates an empty in-memory cart
  *     responses:
  *       201:
  *         description: Cart created successfully
@@ -136,27 +79,12 @@ function transformCart(cart) {
  *               properties:
  *                 cart:
  *                   $ref: '#/components/schemas/Cart'
- *       500:
- *         description: Server error
  */
-router.post('/', async (req, res, next) => {
-  try {
-    const query = gql`
-      mutation CreateCart {
-        cartCreate {
-          cart {
-            ${CART_FRAGMENT}
-          }
-        }
-      }
-    `;
-
-    const data = await client.request(query);
-    const cart = transformCart(data.cartCreate.cart);
-    res.status(201).json({ cart });
-  } catch (error) {
-    next(error);
-  }
+router.post('/', (req, res) => {
+  const id = generateCartId();
+  const cart = { id, lines: [], ...computeTotals([]) };
+  carts.set(id, cart);
+  res.status(201).json({ cart });
 });
 
 /**
@@ -164,52 +92,24 @@ router.post('/', async (req, res, next) => {
  * /api/cart/{cartId}:
  *   get:
  *     summary: Get cart by ID
- *     description: Retrieve an existing cart's contents
  *     parameters:
  *       - in: path
  *         name: cartId
  *         required: true
  *         schema:
  *           type: string
- *         description: The Shopify cart GID
  *     responses:
  *       200:
  *         description: Successful response
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 cart:
- *                   $ref: '#/components/schemas/Cart'
  *       404:
  *         description: Cart not found
- *       500:
- *         description: Server error
  */
-router.get('/:cartId', async (req, res, next) => {
-  try {
-    const { cartId } = req.params;
-
-    const query = gql`
-      query GetCart($cartId: ID!) {
-        cart(id: $cartId) {
-          ${CART_FRAGMENT}
-        }
-      }
-    `;
-
-    const data = await client.request(query, { cartId });
-
-    if (!data.cart) {
-      return res.status(404).json({ error: { message: 'Cart not found', status: 404 } });
-    }
-
-    const cart = transformCart(data.cart);
-    res.json({ cart });
-  } catch (error) {
-    next(error);
+router.get('/:cartId', (req, res) => {
+  const cart = carts.get(req.params.cartId);
+  if (!cart) {
+    return res.status(404).json({ error: { message: 'Cart not found', status: 404 } });
   }
+  res.json({ cart });
 });
 
 /**
@@ -217,7 +117,6 @@ router.get('/:cartId', async (req, res, next) => {
  * /api/cart/{cartId}/lines:
  *   post:
  *     summary: Add items to cart
- *     description: Add one or more product variants to the cart
  *     parameters:
  *       - in: path
  *         name: cartId
@@ -235,51 +134,53 @@ router.get('/:cartId', async (req, res, next) => {
  *                 type: array
  *                 items:
  *                   type: object
- *                   required:
- *                     - merchandiseId
- *                     - quantity
+ *                   required: [merchandiseId, quantity]
  *                   properties:
  *                     merchandiseId:
  *                       type: string
- *                       description: The variant GID
  *                     quantity:
  *                       type: integer
  *                       minimum: 1
+ *                     price:
+ *                       type: string
+ *                       description: Unit price (default "0.00")
  *     responses:
  *       200:
  *         description: Items added successfully
  *       400:
  *         description: Invalid request body
- *       500:
- *         description: Server error
+ *       404:
+ *         description: Cart not found
  */
-router.post('/:cartId/lines', async (req, res, next) => {
-  try {
-    const { cartId } = req.params;
-    const { lines } = req.body;
+router.post('/:cartId/lines', (req, res) => {
+  const cart = carts.get(req.params.cartId);
+  if (!cart) {
+    return res.status(404).json({ error: { message: 'Cart not found', status: 404 } });
+  }
 
-    if (!lines || !Array.isArray(lines) || lines.length === 0) {
-      return res.status(400).json({
-        error: { message: 'Request body must include a non-empty "lines" array', status: 400 },
+  const { lines } = req.body;
+  if (!lines || !Array.isArray(lines) || lines.length === 0) {
+    return res.status(400).json({
+      error: { message: 'Request body must include a non-empty "lines" array', status: 400 },
+    });
+  }
+
+  for (const line of lines) {
+    const existing = cart.lines.find((l) => l.merchandiseId === line.merchandiseId);
+    if (existing) {
+      existing.quantity += line.quantity || 1;
+    } else {
+      cart.lines.push({
+        id: generateLineId(),
+        merchandiseId: line.merchandiseId,
+        quantity: line.quantity || 1,
+        price: line.price || '0.00',
       });
     }
-
-    const query = gql`
-      mutation AddToCart($cartId: ID!, $lines: [CartLineInput!]!) {
-        cartLinesAdd(cartId: $cartId, lines: $lines) {
-          cart {
-            ${CART_FRAGMENT}
-          }
-        }
-      }
-    `;
-
-    const data = await client.request(query, { cartId, lines });
-    const cart = transformCart(data.cartLinesAdd.cart);
-    res.json({ cart });
-  } catch (error) {
-    next(error);
   }
+
+  Object.assign(cart, computeTotals(cart.lines));
+  res.json({ cart });
 });
 
 /**
@@ -287,7 +188,6 @@ router.post('/:cartId/lines', async (req, res, next) => {
  * /api/cart/{cartId}/lines:
  *   put:
  *     summary: Update cart line quantities
- *     description: Update the quantity of existing line items
  *     parameters:
  *       - in: path
  *         name: cartId
@@ -305,13 +205,10 @@ router.post('/:cartId/lines', async (req, res, next) => {
  *                 type: array
  *                 items:
  *                   type: object
- *                   required:
- *                     - id
- *                     - quantity
+ *                   required: [id, quantity]
  *                   properties:
  *                     id:
  *                       type: string
- *                       description: The cart line ID
  *                     quantity:
  *                       type: integer
  *                       minimum: 0
@@ -320,36 +217,35 @@ router.post('/:cartId/lines', async (req, res, next) => {
  *         description: Cart updated successfully
  *       400:
  *         description: Invalid request body
- *       500:
- *         description: Server error
+ *       404:
+ *         description: Cart not found
  */
-router.put('/:cartId/lines', async (req, res, next) => {
-  try {
-    const { cartId } = req.params;
-    const { lines } = req.body;
-
-    if (!lines || !Array.isArray(lines) || lines.length === 0) {
-      return res.status(400).json({
-        error: { message: 'Request body must include a non-empty "lines" array', status: 400 },
-      });
-    }
-
-    const query = gql`
-      mutation UpdateCartLines($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
-        cartLinesUpdate(cartId: $cartId, lines: $lines) {
-          cart {
-            ${CART_FRAGMENT}
-          }
-        }
-      }
-    `;
-
-    const data = await client.request(query, { cartId, lines });
-    const cart = transformCart(data.cartLinesUpdate.cart);
-    res.json({ cart });
-  } catch (error) {
-    next(error);
+router.put('/:cartId/lines', (req, res) => {
+  const cart = carts.get(req.params.cartId);
+  if (!cart) {
+    return res.status(404).json({ error: { message: 'Cart not found', status: 404 } });
   }
+
+  const { lines } = req.body;
+  if (!lines || !Array.isArray(lines) || lines.length === 0) {
+    return res.status(400).json({
+      error: { message: 'Request body must include a non-empty "lines" array', status: 400 },
+    });
+  }
+
+  for (const update of lines) {
+    const idx = cart.lines.findIndex((l) => l.id === update.id);
+    if (idx !== -1) {
+      if (update.quantity <= 0) {
+        cart.lines.splice(idx, 1);
+      } else {
+        cart.lines[idx].quantity = update.quantity;
+      }
+    }
+  }
+
+  Object.assign(cart, computeTotals(cart.lines));
+  res.json({ cart });
 });
 
 /**
@@ -357,7 +253,6 @@ router.put('/:cartId/lines', async (req, res, next) => {
  * /api/cart/{cartId}/lines/{lineId}:
  *   delete:
  *     summary: Remove a line item from cart
- *     description: Remove a specific item from the cart
  *     parameters:
  *       - in: path
  *         name: cartId
@@ -372,29 +267,18 @@ router.put('/:cartId/lines', async (req, res, next) => {
  *     responses:
  *       200:
  *         description: Item removed successfully
- *       500:
- *         description: Server error
+ *       404:
+ *         description: Cart not found
  */
-router.delete('/:cartId/lines/:lineId', async (req, res, next) => {
-  try {
-    const { cartId, lineId } = req.params;
-
-    const query = gql`
-      mutation RemoveCartLines($cartId: ID!, $lineIds: [ID!]!) {
-        cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
-          cart {
-            ${CART_FRAGMENT}
-          }
-        }
-      }
-    `;
-
-    const data = await client.request(query, { cartId, lineIds: [lineId] });
-    const cart = transformCart(data.cartLinesRemove.cart);
-    res.json({ cart });
-  } catch (error) {
-    next(error);
+router.delete('/:cartId/lines/:lineId', (req, res) => {
+  const cart = carts.get(req.params.cartId);
+  if (!cart) {
+    return res.status(404).json({ error: { message: 'Cart not found', status: 404 } });
   }
+
+  cart.lines = cart.lines.filter((l) => l.id !== req.params.lineId);
+  Object.assign(cart, computeTotals(cart.lines));
+  res.json({ cart });
 });
 
 module.exports = router;

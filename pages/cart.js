@@ -7,11 +7,8 @@ import { formatPrice } from '@/lib/shopify';
 import { EmptyState } from '@/components/LoadingStates';
 
 export default function Cart() {
-  const { cart, loading, updateQuantity, removeItem } = useCart();
-
-  const lines = cart?.lines?.edges?.map((edge) => edge.node) || [];
-  const subtotal = cart?.estimatedCost?.subtotalAmount;
-  const total = cart?.estimatedCost?.totalAmount;
+  const { items, loading, subtotal, currencyCode, updateQuantity, removeItem } =
+    useCart();
 
   return (
     <>
@@ -23,7 +20,7 @@ export default function Cart() {
       <div className="fade-in">
         <h1 className="h3 mb-4">Your Cart</h1>
 
-        {lines.length === 0 ? (
+        {items.length === 0 ? (
           <EmptyState
             title="Your cart is empty"
             message="Browse our products and add items to your cart."
@@ -48,21 +45,18 @@ export default function Cart() {
                   </tr>
                 </thead>
                 <tbody>
-                  {lines.map((line) => {
-                    const variant = line.merchandise;
-                    const product = variant.product;
-                    const image = product.images?.edges?.[0]?.node;
+                  {items.map((item) => {
                     const lineTotal =
-                      parseFloat(variant.priceV2.amount) * line.quantity;
+                      parseFloat(item.price) * item.quantity;
 
                     return (
-                      <tr key={line.id}>
+                      <tr key={item.id}>
                         <td>
                           <div className="d-flex align-items-center gap-3">
-                            {image && (
+                            {item.imageUrl && (
                               <Image
-                                src={image.url}
-                                alt={image.altText || product.title}
+                                src={item.imageUrl}
+                                alt={item.imageAlt}
                                 width={64}
                                 height={64}
                                 className="rounded"
@@ -71,24 +65,21 @@ export default function Cart() {
                             )}
                             <div>
                               <Link
-                                href={`/products/${product.handle}`}
+                                href={`/products/${item.productHandle}`}
                                 className="text-dark fw-semibold text-decoration-none"
                               >
-                                {product.title}
+                                {item.productTitle}
                               </Link>
-                              {variant.title !== 'Default Title' && (
+                              {item.variantTitle !== 'Default Title' && (
                                 <small className="d-block text-muted">
-                                  {variant.title}
+                                  {item.variantTitle}
                                 </small>
                               )}
                             </div>
                           </div>
                         </td>
                         <td>
-                          {formatPrice(
-                            variant.priceV2.amount,
-                            variant.priceV2.currencyCode
-                          )}
+                          {formatPrice(item.price, item.currencyCode)}
                         </td>
                         <td>
                           <div className="quantity-control">
@@ -96,19 +87,19 @@ export default function Cart() {
                               variant="outline-secondary"
                               size="sm"
                               onClick={() =>
-                                updateQuantity(line.id, line.quantity - 1)
+                                updateQuantity(item.id, item.quantity - 1)
                               }
                               disabled={loading}
                               aria-label="Decrease quantity"
                             >
                               −
                             </Button>
-                            <span className="fw-semibold">{line.quantity}</span>
+                            <span className="fw-semibold">{item.quantity}</span>
                             <Button
                               variant="outline-secondary"
                               size="sm"
                               onClick={() =>
-                                updateQuantity(line.id, line.quantity + 1)
+                                updateQuantity(item.id, item.quantity + 1)
                               }
                               disabled={loading}
                               aria-label="Increase quantity"
@@ -118,15 +109,15 @@ export default function Cart() {
                           </div>
                         </td>
                         <td className="text-end fw-semibold">
-                          {formatPrice(lineTotal, variant.priceV2.currencyCode)}
+                          {formatPrice(lineTotal, item.currencyCode)}
                         </td>
                         <td>
                           <Button
                             variant="link"
                             className="text-danger p-0"
-                            onClick={() => removeItem(line.id)}
+                            onClick={() => removeItem(item.id)}
                             disabled={loading}
-                            aria-label={`Remove ${product.title}`}
+                            aria-label={`Remove ${item.productTitle}`}
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -152,22 +143,19 @@ export default function Cart() {
 
             {/* Mobile card view */}
             <div className="d-md-none">
-              {lines.map((line) => {
-                const variant = line.merchandise;
-                const product = variant.product;
-                const image = product.images?.edges?.[0]?.node;
+              {items.map((item) => {
                 const lineTotal =
-                  parseFloat(variant.priceV2.amount) * line.quantity;
+                  parseFloat(item.price) * item.quantity;
 
                 return (
                   <div
-                    key={line.id}
+                    key={item.id}
                     className="border rounded p-3 mb-3 d-flex gap-3"
                   >
-                    {image && (
+                    {item.imageUrl && (
                       <Image
-                        src={image.url}
-                        alt={image.altText || product.title}
+                        src={item.imageUrl}
+                        alt={item.imageAlt}
                         width={80}
                         height={80}
                         className="rounded flex-shrink-0"
@@ -176,14 +164,14 @@ export default function Cart() {
                     )}
                     <div className="flex-grow-1">
                       <Link
-                        href={`/products/${product.handle}`}
+                        href={`/products/${item.productHandle}`}
                         className="text-dark fw-semibold text-decoration-none d-block mb-1"
                       >
-                        {product.title}
+                        {item.productTitle}
                       </Link>
-                      {variant.title !== 'Default Title' && (
+                      {item.variantTitle !== 'Default Title' && (
                         <small className="text-muted d-block mb-2">
-                          {variant.title}
+                          {item.variantTitle}
                         </small>
                       )}
                       <div className="d-flex justify-content-between align-items-center">
@@ -192,19 +180,19 @@ export default function Cart() {
                             variant="outline-secondary"
                             size="sm"
                             onClick={() =>
-                              updateQuantity(line.id, line.quantity - 1)
+                              updateQuantity(item.id, item.quantity - 1)
                             }
                             disabled={loading}
                             aria-label="Decrease quantity"
                           >
                             −
                           </Button>
-                          <span className="fw-semibold">{line.quantity}</span>
+                          <span className="fw-semibold">{item.quantity}</span>
                           <Button
                             variant="outline-secondary"
                             size="sm"
                             onClick={() =>
-                              updateQuantity(line.id, line.quantity + 1)
+                              updateQuantity(item.id, item.quantity + 1)
                             }
                             disabled={loading}
                             aria-label="Increase quantity"
@@ -213,16 +201,16 @@ export default function Cart() {
                           </Button>
                         </div>
                         <strong>
-                          {formatPrice(lineTotal, variant.priceV2.currencyCode)}
+                          {formatPrice(lineTotal, item.currencyCode)}
                         </strong>
                       </div>
                     </div>
                     <Button
                       variant="link"
                       className="text-danger p-0 align-self-start flex-shrink-0"
-                      onClick={() => removeItem(line.id)}
+                      onClick={() => removeItem(item.id)}
                       disabled={loading}
-                      aria-label={`Remove ${product.title}`}
+                      aria-label={`Remove ${item.productTitle}`}
                     >
                       &times;
                     </Button>
@@ -238,9 +226,7 @@ export default function Cart() {
                   <div className="d-flex justify-content-between mb-2">
                     <span>Subtotal</span>
                     <strong>
-                      {subtotal
-                        ? formatPrice(subtotal.amount, subtotal.currencyCode)
-                        : '—'}
+                      {formatPrice(subtotal, currencyCode)}
                     </strong>
                   </div>
                   <div className="d-flex justify-content-between mb-3">
@@ -251,21 +237,9 @@ export default function Cart() {
                   <div className="d-flex justify-content-between mb-3">
                     <strong>Estimated Total</strong>
                     <strong className="text-primary">
-                      {total
-                        ? formatPrice(total.amount, total.currencyCode)
-                        : '—'}
+                      {formatPrice(subtotal, currencyCode)}
                     </strong>
                   </div>
-                  {cart?.checkoutUrl && (
-                    <a
-                      href={cart.checkoutUrl}
-                      className="btn btn-primary w-100"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Proceed to Checkout
-                    </a>
-                  )}
                   <Link
                     href="/"
                     className="btn btn-outline-secondary w-100 mt-2"

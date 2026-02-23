@@ -22,9 +22,9 @@ export default function ProductDetail({ product }) {
   const images = product.images?.edges?.map((edge) => edge.node) || [];
   const variants = product.variants?.edges?.map((edge) => edge.node) || [];
 
-  async function handleAddToCart() {
+  function handleAddToCart() {
     if (!selectedVariant) return;
-    await addToCart(selectedVariant.id, 1);
+    addToCart(product, selectedVariant, 1);
     setAddedMessage(true);
     setTimeout(() => setAddedMessage(false), 3000);
   }
@@ -39,7 +39,7 @@ export default function ProductDetail({ product }) {
       <div className="fade-in">
         {/* Breadcrumbs */}
         <Breadcrumb className="mb-4">
-          <Breadcrumb.Item linkAs={Link} linkProps={{ href: '/' }}>
+          <Breadcrumb.Item linkAs={Link} href="/">
             Products
           </Breadcrumb.Item>
           <Breadcrumb.Item active>{product.title}</Breadcrumb.Item>
