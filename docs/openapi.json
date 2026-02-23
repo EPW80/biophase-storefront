@@ -1,0 +1,319 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "BioPhase Storefront API",
+    "version": "1.0.0",
+    "description": "Express proxy API for Shopify Storefront product and cart operations",
+    "contact": {
+      "name": "BioPhase Solutions"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "Local development"
+    }
+  ],
+  "paths": {
+    "/api/products": {
+      "get": {
+        "summary": "List all products",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": { "type": "integer", "default": 20 },
+            "description": "Number of products to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of products",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "products": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Product" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/{handle}": {
+      "get": {
+        "summary": "Get a single product by handle",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "handle",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Product handle (URL slug)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "product": { "$ref": "#/components/schemas/Product" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        }
+      }
+    },
+    "/api/cart": {
+      "post": {
+        "summary": "Create a new cart",
+        "tags": ["Cart"],
+        "responses": {
+          "201": {
+            "description": "New cart created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cart": { "$ref": "#/components/schemas/Cart" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cart/{cartId}": {
+      "get": {
+        "summary": "Get cart by ID",
+        "tags": ["Cart"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cartId",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cart details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "cart": { "$ref": "#/components/schemas/Cart" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cart/{cartId}/lines": {
+      "post": {
+        "summary": "Add items to cart",
+        "tags": ["Cart"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cartId",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "lines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "merchandiseId": { "type": "string" },
+                        "quantity": { "type": "integer" }
+                      },
+                      "required": ["merchandiseId", "quantity"]
+                    }
+                  }
+                },
+                "required": ["lines"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated cart"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update line item quantities",
+        "tags": ["Cart"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cartId",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "lines": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "quantity": { "type": "integer" }
+                      },
+                      "required": ["id", "quantity"]
+                    }
+                  }
+                },
+                "required": ["lines"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated cart"
+          }
+        }
+      }
+    },
+    "/api/cart/{cartId}/lines/{lineId}": {
+      "delete": {
+        "summary": "Remove a line item from cart",
+        "tags": ["Cart"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cartId",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "in": "path",
+            "name": "lineId",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated cart after removal"
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health check",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "Service status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "handle": { "type": "string" },
+          "description": { "type": "string" },
+          "priceRange": {
+            "type": "object",
+            "properties": {
+              "minVariantPrice": {
+                "type": "object",
+                "properties": {
+                  "amount": { "type": "string" },
+                  "currencyCode": { "type": "string" }
+                }
+              }
+            }
+          },
+          "images": { "type": "array" },
+          "variants": { "type": "array" }
+        }
+      },
+      "Cart": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "checkoutUrl": { "type": "string" },
+          "lines": { "type": "array" },
+          "estimatedCost": {
+            "type": "object",
+            "properties": {
+              "subtotalAmount": {
+                "type": "object",
+                "properties": {
+                  "amount": { "type": "string" },
+                  "currencyCode": { "type": "string" }
+                }
+              },
+              "totalAmount": {
+                "type": "object",
+                "properties": {
+                  "amount": { "type": "string" },
+                  "currencyCode": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
