@@ -3,7 +3,8 @@ import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Row, Col, Button, Form, Breadcrumb, Alert } from 'react-bootstrap';
-import { getProductByHandle, getAllProductHandles, formatPrice } from '@/lib/shopify';
+import { getProductByHandle, getAllProductHandles } from '@/lib/shopify';
+import { formatPrice } from '@/lib/formatPrice';
 import { useCart } from '@/lib/cartContext';
 import { ProductDetailSkeleton } from '@/components/LoadingStates';
 
@@ -22,6 +23,20 @@ export default function ProductDetail({ product }) {
   const images = product.images?.edges?.map((edge) => edge.node) || [];
   const variants = product.variants?.edges?.map((edge) => edge.node) || [];
 
+  // Track selected value for each option (e.g. { "Size": "Small", "Color": "Red" })
+  const [selectedOptions, setSelectedOptions] = useState(() => {
+    const initial = {};
+    if (selectedVariant?.selectedOptions) {
+      selectedVariant.selectedOptions.forEach((so) => {
+        initial[so.name] = so.value;
+      });
+    }
+    return initial;
+  });
+
+  // Sanitize product description HTML
+  const sanitizedDescription = product.descriptionHtml || '';
+
   function handleAddToCart() {
     if (!selectedVariant) return;
     addToCart(product, selectedVariant, 1);
@@ -34,6 +49,18 @@ export default function ProductDetail({ product }) {
       <Head>
         <title>{product.title} — BioPhase Solutions</title>
         <meta name="description" content={product.description} />
+        <meta property="og:title" content={`${product.title} — BioPhase Solutions`} />
+        <meta property="og:description" content={product.description} />
+        <meta property="og:type" content="product" />
+        {images[0]?.url && (
+          <meta property="og:image" content={images[0].url} />
+        )}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={product.title} />
+        <meta name="twitter:description" content={product.description} />
+        {images[0]?.url && (
+          <meta name="twitter:image" content={images[0].url} />
+        )}
       </Head>
 
       <div className="fade-in">
@@ -125,21 +152,22 @@ export default function ProductDetail({ product }) {
                         {option.name}
                       </Form.Label>
                       <Form.Select
+                        value={selectedOptions[option.name] || ''}
                         onChange={(e) => {
+                          const newOptions = {
+                            ...selectedOptions,
+                            [option.name]: e.target.value,
+                          };
+                          setSelectedOptions(newOptions);
+
+                          // Find variant matching ALL selected options
                           const variant = variants.find((v) =>
-                            v.selectedOptions?.some(
-                              (so) =>
-                                so.name === option.name &&
-                                so.value === e.target.value
+                            v.selectedOptions?.every(
+                              (so) => newOptions[so.name] === so.value
                             )
                           );
                           if (variant) setSelectedVariant(variant);
                         }}
-                        defaultValue={
-                          selectedVariant?.selectedOptions?.find(
-                            (so) => so.name === option.name
-                          )?.value
-                        }
                       >
                         {option.values.map((value) => (
                           <option key={value} value={value}>
@@ -177,10 +205,10 @@ export default function ProductDetail({ product }) {
             )}
 
             {/* Description */}
-            {product.descriptionHtml ? (
+            {sanitizedDescription ? (
               <div
                 className="mt-4 text-secondary"
-                dangerouslySetInnerHTML={{ __html: product.descriptionHtml }}
+                dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
               />
             ) : (
               product.description && (
@@ -241,6 +269,20 @@ export async function getStaticProps({ params }) {
     if (!product) {
       return { notFound: true };
     }
+
+    // Sanitize HTML description at build time (server-side only)
+    if (product.descriptionHtml) {
+      const sanitizeHtml = (await import('sanitize-html')).default;
+      product.descriptionHtml = sanitizeHtml(product.descriptionHtml, {
+        allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
+        allowedAttributes: {
+          ...sanitizeHtml.defaults.allowedAttributes,
+          img: ['src', 'alt', 'width', 'height'],
+        },
+        disallowedTagsMode: 'discard',
+      });
+    }
+
     return {
       props: { product },
       revalidate: 60,

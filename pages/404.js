@@ -6,6 +6,7 @@ export default function Custom404() {
     <>
       <Head>
         <title>Page Not Found — BioPhase Solutions</title>
+        <meta name="description" content="The page you're looking for doesn't exist or has been moved." />
       </Head>
 
       <div className="text-center py-5 fade-in">

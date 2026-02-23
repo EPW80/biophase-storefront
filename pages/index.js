@@ -13,6 +13,18 @@ export default function Home({ products }) {
           name="description"
           content="Premium biomedical products for research and clinical applications."
         />
+        <meta property="og:title" content="BioPhase Solutions — Products" />
+        <meta
+          property="og:description"
+          content="Premium biomedical products for research and clinical applications."
+        />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="BioPhase Solutions — Products" />
+        <meta
+          name="twitter:description"
+          content="Premium biomedical products for research and clinical applications."
+        />
       </Head>
 
       {/* Hero Banner */}

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Navbar as BSNavbar,
   Nav,
@@ -13,6 +13,12 @@ export default function Navbar() {
   const router = useRouter();
   const { itemCount } = useCart();
   const [expanded, setExpanded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration flash — only show cart badge after client mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <BSNavbar
@@ -25,52 +31,50 @@ export default function Navbar() {
       className="shadow-sm"
     >
       <Container>
-        <Link href="/" passHref legacyBehavior>
-          <BSNavbar.Brand className="fw-bold">
-            <span className="text-primary">Bio</span>Phase
-          </BSNavbar.Brand>
-        </Link>
+        <BSNavbar.Brand as={Link} href="/" className="fw-bold">
+          <span className="text-primary">Bio</span>Phase
+        </BSNavbar.Brand>
 
         <BSNavbar.Toggle aria-controls="main-navbar" />
 
         <BSNavbar.Collapse id="main-navbar">
           <Nav className="me-auto">
-            <Link href="/" passHref legacyBehavior>
-              <Nav.Link
-                active={router.pathname === '/'}
-                onClick={() => setExpanded(false)}
-              >
-                Products
-              </Nav.Link>
-            </Link>
+            <Nav.Link
+              as={Link}
+              href="/"
+              active={router.pathname === '/'}
+              onClick={() => setExpanded(false)}
+            >
+              Products
+            </Nav.Link>
           </Nav>
 
           <Nav>
-            <Link href="/cart" passHref legacyBehavior>
-              <Nav.Link
-                active={router.pathname === '/cart'}
-                onClick={() => setExpanded(false)}
-                className="d-flex align-items-center"
+            <Nav.Link
+              as={Link}
+              href="/cart"
+              active={router.pathname === '/cart'}
+              onClick={() => setExpanded(false)}
+              className="d-flex align-items-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                fill="currentColor"
+                viewBox="0 0 16 16"
+                className="me-1"
+                aria-hidden="true"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  fill="currentColor"
-                  viewBox="0 0 16 16"
-                  className="me-1"
-                  aria-hidden="true"
-                >
-                  <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
-                </svg>
-                Cart
-                {itemCount > 0 && (
-                  <Badge bg="primary" pill className="ms-1">
-                    {itemCount}
-                  </Badge>
-                )}
-              </Nav.Link>
-            </Link>
+                <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+              </svg>
+              Cart
+              {mounted && itemCount > 0 && (
+                <Badge bg="primary" pill className="ms-1">
+                  {itemCount}
+                </Badge>
+              )}
+            </Nav.Link>
           </Nav>
         </BSNavbar.Collapse>
       </Container>

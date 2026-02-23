@@ -5,8 +5,8 @@ A custom Shopify storefront with a headless React frontend, responsive Bootstrap
 ## Tech Stack
 
 - **Frontend:** Next.js (Pages Router) · React 19 · Bootstrap 5 · Sass
-- **E-Commerce:** Shopify Storefront API (GraphQL)
-- **API Proxy:** Express · Swagger/OpenAPI docs
+- **E-Commerce:** Shopify Admin API (product data) · Storefront API (cart/checkout)
+- **API Layer:** Next.js API routes (production) · Express proxy (local dev) · Swagger/OpenAPI docs
 - **Theme:** Custom Shopify Liquid section
 - **Deployment:** Vercel
 
@@ -15,7 +15,7 @@ A custom Shopify storefront with a headless React frontend, responsive Bootstrap
 ```
 ├── components/           # React components (Layout, Navbar, ProductCard, etc.)
 ├── pages/                # Next.js pages (index, product detail, cart)
-├── lib/                  # Shopify client & cart context
+├── lib/                  # Shopify clients (Admin + Storefront) & cart context
 ├── styles/               # Bootstrap overrides (SCSS) & global CSS
 ├── shopify-theme/        # Custom Liquid theme sections
 │   └── sections/         # Featured Products carousel
@@ -31,7 +31,8 @@ A custom Shopify storefront with a headless React frontend, responsive Bootstrap
 
 - Node.js 18+
 - A [Shopify Partner](https://partners.shopify.com/) account with a development store
-- Storefront API access token
+- Shopify Admin API credentials (client ID and client secret)
+- Shopify Storefront API access token — optional (for cart/checkout; tokenless also works)
 
 ### 1. Install dependencies
 
@@ -49,8 +50,9 @@ Copy `.env.example` to `.env` and fill in your Shopify credentials:
 
 ```env
 SHOPIFY_STORE_URL=your-store.myshopify.com
-SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_token
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+SHOPIFY_CLIENT_ID=your_client_id
+SHOPIFY_CLIENT_SECRET=your_client_secret
+SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_storefront_access_token
 ```
 
 ### 3. Run development servers
@@ -73,9 +75,9 @@ With the Express server running, visit [http://localhost:3001/api/docs](http://l
 |---------|-------------|
 | **Product Listing** | SSG grid with ISR (60s revalidation), responsive 1/2/3 column layout |
 | **Product Detail** | Image gallery, variant selector, add-to-cart, mobile sticky bar |
-| **Cart** | Full CRUD, desktop table + mobile card views, quantity controls |
+| **Cart** | Shopify Cart API integration, real checkout, desktop table + mobile cards |
 | **Liquid Theme** | Featured Products carousel section for Shopify Theme Editor |
-| **API Proxy** | Express server proxying Shopify data with Swagger docs |
+| **API Routes** | Next.js API routes (products + cart), Express dev server, Swagger docs |
 | **Responsive** | Mobile-first Bootstrap grid, collapsible nav, breakpoint behavior |
 
 ## Git Conventions

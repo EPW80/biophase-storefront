@@ -1,6 +1,6 @@
 # Shopify Partner & Dev Store Setup
 
-Follow these steps to get your Storefront API credentials.
+Follow these steps to get your Admin API credentials.
 
 ## 1. Create a Shopify Partner Account
 
@@ -29,30 +29,64 @@ Follow these steps to get your Storefront API credentials.
 4. Add product images (use royalty-free lab equipment photos from Unsplash)
 5. Add variants where appropriate (e.g., sizes, quantities)
 
-## 4. Create a Storefront API Access Token
+## 4. Create Admin API Credentials
 
 1. In your **dev store admin**, go to **Settings** → **Apps and sales channels**
 2. Click **Develop apps** → **Create an app**
 3. Name: `Biophase Storefront`
-4. Under **Configuration**, enable **Storefront API access scopes**:
+4. Under **Configuration**, enable **Admin API access scopes**:
+   - `read_products`
+   - `read_product_listings`
+5. Click **Install app**
+6. Go to **API credentials** and note the **Client ID** and **Client secret**
+   (used for the OAuth client credentials grant)
+
+## 5. Create Storefront API Access Token (optional)
+
+The Storefront API is used for cart and checkout operations.
+Cart works **tokenless** out of the box (1,000 complexity limit).
+Add a token for higher limits or access to metafields, customers, and menus.
+
+Shopify offers two token types:
+
+| Type | Prefix | Use case | Safe for browser? |
+|------|--------|----------|-------------------|
+| **Public** | `shpua_` | Client-side apps, higher rate limits | Yes |
+| **Private** | `shpss_` | Server-side only, full API access | **No** |
+
+This project uses the token **server-side only** (Next.js API routes), so either type works.
+
+### Option A: Via the Headless channel (recommended)
+
+1. In Shopify Admin, go to **Sales channels** → **Add** → **Headless**
+2. Create a storefront inside the Headless channel
+3. Copy the **public** or **private** Storefront token
+
+### Option B: Via a custom app
+
+1. In the same **Develop apps** screen, select your `Biophase Storefront` app
+2. Under **Configuration**, enable **Storefront API access scopes**:
    - `unauthenticated_read_product_listings`
-   - `unauthenticated_read_product_inventory`
    - `unauthenticated_write_checkouts`
    - `unauthenticated_read_checkouts`
-5. Click **Install app**
-6. Go to **API credentials** and copy the **Storefront API access token**
+3. Click **Save** and then go to **API credentials**
+4. Under **Storefront API access token**, copy the token
 
-## 5. Update Environment Variables
+> **Security:** Never prefix this env var with `NEXT_PUBLIC_` — it is used only
+> in server-side API routes and must not be exposed to the browser.
 
-Paste your credentials in `.env`:
+## 6. Update Environment Variables
+
+Paste your credentials in `.env.local`:
 
 ```env
 SHOPIFY_STORE_URL=biophase-dev.myshopify.com
-SHOPIFY_STOREFRONT_ACCESS_TOKEN=<paste your token here>
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+SHOPIFY_CLIENT_ID=<paste your client ID here>
+SHOPIFY_CLIENT_SECRET=<paste your client secret here>
+SHOPIFY_STOREFRONT_ACCESS_TOKEN=<paste your storefront access token here>
 ```
 
-## 6. Verify
+## 7. Verify
 
 ```bash
 # Start the dev server
