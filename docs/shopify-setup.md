@@ -49,10 +49,10 @@ Add a token for higher limits or access to metafields, customers, and menus.
 
 Shopify offers two token types:
 
-| Type | Prefix | Use case | Safe for browser? |
-|------|--------|----------|-------------------|
-| **Public** | `shpua_` | Client-side apps, higher rate limits | Yes |
-| **Private** | `shpss_` | Server-side only, full API access | **No** |
+| Type        | Prefix   | Use case                             | Safe for browser? |
+| ----------- | -------- | ------------------------------------ | ----------------- |
+| **Public**  | `shpua_` | Client-side apps, higher rate limits | Yes               |
+| **Private** | `shpss_` | Server-side only, full API access    | **No**            |
 
 This project uses the token **server-side only** (Next.js API routes), so either type works.
 
