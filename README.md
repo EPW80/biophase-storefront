@@ -71,14 +71,14 @@ With the Express server running, visit [http://localhost:3001/api/docs](http://l
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Product Listing** | SSG grid with ISR (60s revalidation), responsive 1/2/3 column layout |
-| **Product Detail** | Image gallery, variant selector, add-to-cart, mobile sticky bar |
-| **Cart** | Shopify Cart API integration, real checkout, desktop table + mobile cards |
-| **Liquid Theme** | Featured Products carousel section for Shopify Theme Editor |
-| **API Routes** | Next.js API routes (products + cart), Express dev server, Swagger docs |
-| **Responsive** | Mobile-first Bootstrap grid, collapsible nav, breakpoint behavior |
+| Feature             | Description                                                               |
+| ------------------- | ------------------------------------------------------------------------- |
+| **Product Listing** | SSG grid with ISR (60s revalidation), responsive 1/2/3 column layout      |
+| **Product Detail**  | Image gallery, variant selector, add-to-cart, mobile sticky bar           |
+| **Cart**            | Shopify Cart API integration, real checkout, desktop table + mobile cards |
+| **Liquid Theme**    | Featured Products carousel section for Shopify Theme Editor               |
+| **API Routes**      | Next.js API routes (products + cart), Express dev server, Swagger docs    |
+| **Responsive**      | Mobile-first Bootstrap grid, collapsible nav, breakpoint behavior         |
 
 ## Git Conventions
 
