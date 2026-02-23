@@ -8,6 +8,10 @@
         "endstylesheet",
         "linecap",
         "linejoin",
-        "myshopify"
+        "metafields",
+        "metaobjects",
+        "myshopify",
+        "shpat",
+        "tokenless"
     ]
 }

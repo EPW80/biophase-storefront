@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, Badge } from 'react-bootstrap';
-import { formatPrice } from '@/lib/shopify';
+import { formatPrice } from '@/lib/formatPrice';
 
 export default function ProductCard({ product }) {
   const image = product.images?.edges?.[0]?.node;

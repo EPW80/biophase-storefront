@@ -3,12 +3,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Row, Col, Button, Table } from 'react-bootstrap';
 import { useCart } from '@/lib/cartContext';
-import { formatPrice } from '@/lib/shopify';
+import { formatPrice } from '@/lib/formatPrice';
 import { EmptyState } from '@/components/LoadingStates';
 
 export default function Cart() {
-  const { items, loading, subtotal, currencyCode, updateQuantity, removeItem } =
-    useCart();
+  const {
+    items, loading, error, subtotal, currencyCode,
+    checkoutUrl, updateQuantity, removeItem,
+  } = useCart();
 
   return (
     <>
@@ -19,6 +21,12 @@ export default function Cart() {
 
       <div className="fade-in">
         <h1 className="h3 mb-4">Your Cart</h1>
+
+        {error && (
+          <div className="alert alert-danger" role="alert">
+            {error}
+          </div>
+        )}
 
         {items.length === 0 ? (
           <EmptyState
@@ -125,6 +133,7 @@ export default function Cart() {
                               height="18"
                               fill="currentColor"
                               viewBox="0 0 16 16"
+                              aria-hidden="true"
                             >
                               <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
                               <path
@@ -240,6 +249,16 @@ export default function Cart() {
                       {formatPrice(subtotal, currencyCode)}
                     </strong>
                   </div>
+                  <Button
+                    as="a"
+                    href={checkoutUrl || '#'}
+                    variant="primary"
+                    size="lg"
+                    className="w-100 mt-2"
+                    disabled={!checkoutUrl || loading}
+                  >
+                    {loading ? 'Updating…' : 'Proceed to Checkout'}
+                  </Button>
                   <Link
                     href="/"
                     className="btn btn-outline-secondary w-100 mt-2"
