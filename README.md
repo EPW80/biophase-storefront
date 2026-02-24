@@ -5,7 +5,7 @@ A custom Shopify storefront with a headless React frontend, responsive Bootstrap
 ## Tech Stack
 
 - **Frontend:** Next.js (Pages Router) · React 19 · Bootstrap 5 · Sass
-- **E-Commerce:** Shopify Admin API (product data) · Storefront API (cart/checkout)
+- **E-Commerce:** Shopify Storefront API (products + cart/checkout)
 - **API Layer:** Next.js API routes (production) · Express proxy (local dev) · Swagger/OpenAPI docs
 - **Theme:** Custom Shopify Liquid section
 - **Deployment:** Vercel
@@ -15,7 +15,7 @@ A custom Shopify storefront with a headless React frontend, responsive Bootstrap
 ```
 ├── components/           # React components (Layout, Navbar, ProductCard, etc.)
 ├── pages/                # Next.js pages (index, product detail, cart)
-├── lib/                  # Shopify clients (Admin + Storefront) & cart context
+├── lib/                  # Shopify Storefront API client & cart context
 ├── styles/               # Bootstrap overrides (SCSS) & global CSS
 ├── shopify-theme/        # Custom Liquid theme sections
 │   └── sections/         # Featured Products carousel
@@ -31,8 +31,7 @@ A custom Shopify storefront with a headless React frontend, responsive Bootstrap
 
 - Node.js 18+
 - A [Shopify Partner](https://partners.shopify.com/) account with a development store
-- Shopify Admin API credentials (client ID and client secret)
-- Shopify Storefront API access token — optional (for cart/checkout; tokenless also works)
+- Shopify Storefront API access (unlock Online Store channel for tokenless access, or create a Storefront Access Token)
 
 ### 1. Install dependencies
 
@@ -50,9 +49,7 @@ Copy `.env.example` to `.env` and fill in your Shopify credentials:
 
 ```env
 SHOPIFY_STORE_URL=your-store.myshopify.com
-SHOPIFY_CLIENT_ID=your_client_id
-SHOPIFY_CLIENT_SECRET=your_client_secret
-SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_storefront_access_token
+SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_storefront_access_token  # optional — tokenless works
 ```
 
 ### 3. Run development servers
