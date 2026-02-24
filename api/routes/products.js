@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getClient, gql } = require('../lib/shopifyClient');
+const { storefrontFetch } = require('../lib/shopifyClient');
 
 /**
  * @swagger
@@ -50,28 +50,23 @@ const { getClient, gql } = require('../lib/shopifyClient');
  */
 
 /**
- * Transform raw Shopify Admin API product data into a clean API response.
- * Admin API uses priceRangeV2 and variant price is a flat string.
+ * Transform raw Shopify Storefront API product data into a clean API response.
  */
 function transformProduct(node) {
-  const priceRange = node.priceRangeV2 || node.priceRange;
   return {
     id: node.id,
     title: node.title,
     handle: node.handle,
     description: node.description,
     descriptionHtml: node.descriptionHtml || null,
-    price: priceRange?.minVariantPrice || null,
+    price: node.priceRange?.minVariantPrice || null,
     image: node.images?.edges?.[0]?.node || null,
     images: node.images?.edges?.map((e) => e.node) || [],
     variants:
       node.variants?.edges?.map((e) => ({
         id: e.node.id,
         title: e.node.title,
-        price: {
-          amount: e.node.price,
-          currencyCode: priceRange?.minVariantPrice?.currencyCode || 'USD',
-        },
+        price: e.node.priceV2,
         availableForSale: e.node.availableForSale,
         selectedOptions: e.node.selectedOptions || [],
       })) || [],
@@ -115,7 +110,7 @@ router.get('/', async (req, res, next) => {
   try {
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 100);
 
-    const query = gql`
+    const query = `
       query GetProducts($first: Int!) {
         products(first: $first) {
           edges {
@@ -124,7 +119,7 @@ router.get('/', async (req, res, next) => {
               title
               handle
               description
-              priceRangeV2 {
+              priceRange {
                 minVariantPrice {
                   amount
                   currencyCode
@@ -145,7 +140,10 @@ router.get('/', async (req, res, next) => {
                   node {
                     id
                     title
-                    price
+                    priceV2 {
+                      amount
+                      currencyCode
+                    }
                     availableForSale
                   }
                 }
@@ -156,8 +154,7 @@ router.get('/', async (req, res, next) => {
       }
     `;
 
-    const client = await getClient();
-    const data = await client.request(query, { first: limit });
+    const data = await storefrontFetch(query, { first: limit });
     const products = data.products.edges.map((edge) =>
       transformProduct(edge.node)
     );
@@ -200,7 +197,7 @@ router.get('/:handle', async (req, res, next) => {
   try {
     const { handle } = req.params;
 
-    const query = gql`
+    const query = `
       query GetProductByHandle($handle: String!) {
         productByHandle(handle: $handle) {
           id
@@ -208,7 +205,7 @@ router.get('/:handle', async (req, res, next) => {
           handle
           description
           descriptionHtml
-          priceRangeV2 {
+          priceRange {
             minVariantPrice {
               amount
               currencyCode
@@ -233,7 +230,10 @@ router.get('/:handle', async (req, res, next) => {
               node {
                 id
                 title
-                price
+                priceV2 {
+                  amount
+                  currencyCode
+                }
                 availableForSale
                 selectedOptions {
                   name
@@ -251,8 +251,7 @@ router.get('/:handle', async (req, res, next) => {
       }
     `;
 
-    const client = await getClient();
-    const data = await client.request(query, { handle });
+    const data = await storefrontFetch(query, { handle });
 
     if (!data.productByHandle) {
       return res.status(404).json({ error: { message: 'Product not found', status: 404 } });

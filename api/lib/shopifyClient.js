@@ -1,77 +1,50 @@
-const { GraphQLClient, gql } = require("graphql-request");
-
 const domain = process.env.SHOPIFY_STORE_URL;
-const clientId = process.env.SHOPIFY_CLIENT_ID;
-const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
+const storefrontToken = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN || null;
 
-// Validate required environment variables at module load
-const requiredEnvVars = {
-  SHOPIFY_STORE_URL: domain,
-  SHOPIFY_CLIENT_ID: clientId,
-  SHOPIFY_CLIENT_SECRET: clientSecret,
-};
-const missing = Object.entries(requiredEnvVars)
-  .filter(([, value]) => !value)
-  .map(([key]) => key);
-if (missing.length > 0) {
+if (!domain) {
   throw new Error(
-    `Missing required environment variables: ${missing.join(', ')}. ` +
-    'Create a .env file in the api/ directory with these values.'
+    'Missing SHOPIFY_STORE_URL. Add it to your .env file. See .env.example for reference.'
   );
 }
 
-const endpoint = `https://${domain}/admin/api/2026-01/graphql.json`;
-
-// --- Client Credentials Grant: token cache ---
-let cachedToken = null;
-let tokenExpiresAt = 0;
+const STOREFRONT_ENDPOINT = `https://${domain}/api/2026-01/graphql.json`;
 
 /**
- * Exchange client_id + client_secret for a short-lived access token.
- * Tokens are valid for ~24 h; we refresh 5 min early to avoid races.
+ * Execute a GraphQL query against the Shopify Storefront API.
+ * Uses tokenless access by default; set SHOPIFY_STOREFRONT_ACCESS_TOKEN
+ * for higher rate limits or metafield access.
+ *
+ * @param {string} query - GraphQL query/mutation
+ * @param {Object} variables - Query variables
+ * @returns {Object} Parsed response data
  */
-async function getAccessToken() {
-  const now = Date.now();
-  if (cachedToken && now < tokenExpiresAt) {
-    return cachedToken;
+async function storefrontFetch(query, variables = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+
+  if (storefrontToken) {
+    headers['X-Shopify-Storefront-Access-Token'] = storefrontToken;
   }
 
-  const tokenUrl = `https://${domain}/admin/oauth/access_token`;
-  const res = await fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: clientId,
-      client_secret: clientSecret,
-      grant_type: "client_credentials",
-    }),
+  const res = await fetch(STOREFRONT_ENDPOINT, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ query, variables }),
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Shopify token exchange failed (${res.status}): ${text}`);
+    const body = await res.text();
+    throw new Error(`Storefront API error (${res.status}): ${body}`);
   }
 
   const json = await res.json();
-  cachedToken = json.access_token;
-  // Default 24 h minus 5 min safety margin
-  const expiresInMs = (json.expires_in || 86400) * 1000 - 5 * 60 * 1000;
-  tokenExpiresAt = now + expiresInMs;
 
-  return cachedToken;
+  if (json.errors) {
+    throw new Error(
+      `Storefront GraphQL errors: ${JSON.stringify(json.errors, null, 2)}`
+    );
+  }
+
+  return json.data;
 }
 
-/**
- * Return a ready-to-use GraphQLClient with a fresh access token.
- */
-async function getClient() {
-  const token = await getAccessToken();
-  return new GraphQLClient(endpoint, {
-    headers: {
-      "X-Shopify-Access-Token": token,
-      "Content-Type": "application/json",
-    },
-  });
-}
-
-module.exports = { getClient, gql };
+module.exports = { storefrontFetch };
